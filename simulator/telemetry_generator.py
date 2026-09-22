@@ -48,7 +48,7 @@ def generate_record(fault_type):
         profile["exhaust_gas_temperature"][1]
     )
     
-    vibration = np.random.noraml(
+    vibration = np.random.normal(
         profile["vibration"][0],
         profile["vibration"][1]
     )
@@ -107,3 +107,13 @@ def generate_dataset():
             records.append(record)
         
     return pd.DataFrame(records)
+
+if __name__ == "__main__":
+    dataset = generate_dataset()
+    
+    output_path = "../data/raw/engine_telemetry.csv"
+    dataset.to_csv(output_path, index=False)
+    
+    print("Dataset generated successfully!")
+    print(f"Total records: {len(dataset)}")
+    print(f"Saved to {output_path}")
