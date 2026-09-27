@@ -74,3 +74,16 @@ SIMULATION_PROFILES = {
             "ambient_temperature": (25, 5)
         },
 }
+
+PARAMETER_BOUNDS = {
+    "rpm": (1800, 3600),
+    "oil_pressure": (1.5, 5.5),
+    "oil_temperature": (70, 130),
+    "cylinder_head_temperature": (130, 240),
+    "exhaust_gas_temperature": (500, 800),
+    "fuel_flow": (5.0, 11.0),
+    "manifold_pressure": (0.50, 1.05),
+    "vibration": (0.5, 1.20),
+    "engine_load": (10, 100),
+    "ambient_temperature": (10, 40)
+}

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from config import NUM_RECORDS, FAULT_CLASSES, SIMULATION_PROFILES
+from config import (NUM_RECORDS, FAULT_CLASSES, SIMULATION_PROFILES, PARAMETER_BOUNDS)
 
 def get_fault_distribution():
     records_per_fault = NUM_RECORDS // len(FAULT_CLASSES)
@@ -77,6 +77,41 @@ def generate_record(fault_type):
         vibration += 0.25
         rpm += np.random.normal(0, 100)
         
+    rpm = np.clip(rpm, *PARAMETER_BOUNDS["rpm"])
+    oil_pressure = np.clip(oil_pressure, *PARAMETER_BOUNDS["oil_pressure"])
+    oil_temperature = np.clip(
+        oil_temperature,
+        *PARAMETER_BOUNDS["oil_temperature"]
+    )
+    cylinder_head_temperature = np.clip(
+        cylinder_head_temperature,
+        *PARAMETER_BOUNDS["cylinder_head_temperature"]
+    )
+    exhaust_gas_temperature = np.clip(
+        exhaust_gas_temperature,
+        *PARAMETER_BOUNDS["exhaust_gas_temperature"]
+    )
+    fuel_flow = np.clip(
+        fuel_flow,
+        *PARAMETER_BOUNDS["fuel_flow"]
+    )
+    manifold_pressure = np.clip(
+        manifold_pressure,
+        *PARAMETER_BOUNDS["manifold_pressure"]
+    )
+    vibration = np.clip(
+        vibration,
+        *PARAMETER_BOUNDS["vibration"]
+    )
+    engine_load = np.clip(
+        engine_load,
+        *PARAMETER_BOUNDS["engine_load"]
+    )
+    ambient_temperature = np.clip(
+        ambient_temperature,
+        *PARAMETER_BOUNDS["ambient_temperature"]
+    )
+    
     return {
         "rpm": rpm,
         "oil_pressure": oil_pressure,
