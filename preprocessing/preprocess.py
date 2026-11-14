@@ -1,7 +1,11 @@
+import os
+import sys
+from pathlib import Path
 import pandas as pd
 
-INPUT_PATH = "../data/raw/engine_telemetry.csv"
-OUTPUT_PATH = "../data/processed/engine_telemetry_processed.csv"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+INPUT_PATH = os.path.join(PROJECT_ROOT, "data", "raw", "engine_telemetry.csv")
+OUTPUT_PATH = os.path.join(PROJECT_ROOT, "data", "processed", "engine_telemetry_processed.csv")
 
 def load_dataset():
     dataset = pd.read_csv(INPUT_PATH)

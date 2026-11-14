@@ -1,7 +1,10 @@
+import os
+import sys
+from pathlib import Path
 import pandas as pd
 
-
-DATASET_PATH = "../data/raw/engine_telemetry.csv"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATASET_PATH = os.path.join(PROJECT_ROOT, "data", "raw", "engine_telemetry.csv")
 
 
 def load_dataset():

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aero Engine Digital Twin | Interactive 3D Telemetry & Health Monitor</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Chart.js & Three.js Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="dashboard-container">
+
+    <!-- Top Navigation -->
+    <header class="header-nav">
+      <div class="brand-title">
+        <i class="fa-solid fa-plane-up brand-icon"></i>
+        <div class="title-text">
+          <h1>UAV AERO PISTON ENGINE DIGITAL TWIN</h1>
+          <span>INTERACTIVE 3D SIMULATION & HEALTH MONITORING CONSOLE</span>
+        </div>
+      </div>
+
+      <div class="nav-controls">
+        <div class="status-badge" id="backend-status">
+          <span class="dot offline" id="status-dot"></span>
+          <span id="status-text">Connecting...</span>
+        </div>
+
+        <div class="model-selector">
+          <label for="model-select"><i class="fa-solid fa-brain"></i> Active Model:</label>
+          <select id="model-select" onchange="changeModel(this.value)">
+            <option value="rf" selected>Random Forest (Recommended)</option>
+            <option value="svm">Support Vector Machine (SVM)</option>
+            <option value="xgboost">XGBoost Classifier</option>
+            <option value="ensemble">Soft Voting Ensemble</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- Simulation Control Banner -->
+    <section class="simulation-bar">
+      <div class="sim-buttons">
+        <button class="btn btn-primary" id="btn-start" onclick="startSimulation()">
+          <i class="fa-solid fa-play"></i> Start
+        </button>
+        <button class="btn btn-warning" id="btn-pause" onclick="pauseSimulation()">
+          <i class="fa-solid fa-pause"></i> Pause
+        </button>
+        <button class="btn btn-secondary" id="btn-resume" onclick="resumeSimulation()">
+          <i class="fa-solid fa-play"></i> Resume
+        </button>
+        <button class="btn btn-danger" id="btn-reset" onclick="resetSimulation()">
+          <i class="fa-solid fa-rotate-right"></i> Reset
+        </button>
+      </div>
+
+      <div class="rpm-control">
+        <label for="rpm-slider"><i class="fa-solid fa-gauge-high"></i> Simulated RPM:</label>
+        <input type="range" id="rpm-slider" min="1500" max="3500" step="50" value="2800" oninput="onRpmSliderInput(this.value)">
+        <span id="rpm-slider-val">2800 RPM</span>
+      </div>
+
+      <div class="speed-control">
+        <label><i class="fa-solid fa-forward"></i> Speed:</label>
+        <button class="speed-btn" id="speed-05" onclick="setSimulationSpeed(0.5)">0.5x</button>
+        <button class="speed-btn active" id="speed-10" onclick="setSimulationSpeed(1.0)">1.0x</button>
+        <button class="speed-btn" id="speed-20" onclick="setSimulationSpeed(2.0)">2.0x</button>
+        <button class="speed-btn" id="speed-40" onclick="setSimulationSpeed(4.0)">4.0x</button>
+      </div>
+
+      <div class="mode-control">
+        <label><i class="fa-solid fa-network-wired"></i> Streaming Mode:</label>
+        <button class="mode-btn active" id="mode-auto" onclick="setSimulationMode('auto_cycle')">
+          <i class="fa-solid fa-rotate"></i> Auto Mission Cycle
+        </button>
+        <button class="mode-btn" id="mode-dataset" onclick="setSimulationMode('dataset_replay')">
+          <i class="fa-solid fa-database"></i> Continuous Dataset
+        </button>
+        <button class="mode-btn" id="mode-manual" onclick="setSimulationMode('manual')">
+          <i class="fa-solid fa-sliders"></i> Manual
+        </button>
+      </div>
+
+      <div class="scenario-picker">
+        <label><i class="fa-solid fa-sliders"></i> Manual Override:</label>
+        <button class="scenario-btn" id="scenario-normal" onclick="setFaultScenario('Normal')">Normal</button>
+        <button class="scenario-btn" id="scenario-overheating" onclick="setFaultScenario('Overheating')">Overheating</button>
+        <button class="scenario-btn" id="scenario-lubrication" onclick="setFaultScenario('Lubrication Fault')">Lubrication</button>
+        <button class="scenario-btn" id="scenario-vibration" onclick="setFaultScenario('Mechanical/Vibration Fault')">Vibration</button>
+      </div>
+    </section>
+
+    <!-- Active Mission Phase Status Banner -->
+    <section class="mission-phase-banner" id="mission-phase-banner">
+      <span class="phase-dot"></span>
+      <span class="phase-title"><i class="fa-solid fa-plane-up"></i> CONTINUOUS SIMULATION STATUS:</span>
+      <span id="mission-phase-text" class="phase-text">PHASE 1: NOMINAL UAV CLIMB & CRUISE</span>
+    </section>
+
+    <!-- Main Dashboard Grid -->
+    <main class="dashboard-grid">
+
+      <!-- Interactive 3D Aero Piston Engine Viewport (Span 12) -->
+      <div class="card viewport-card">
+        <div class="card-title">
+          <span><i class="fa-solid fa-cube"></i> Interactive 3D Aero Piston Engine Visualization</span>
+          <div class="viewport-actions">
+            <button class="btn btn-secondary btn-sm" onclick="toggleCutawayView()">
+              <i class="fa-solid fa-layer-group"></i> Cutaway / Exploded View
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="toggleInspectorHint()">
+              <i class="fa-solid fa-microscope"></i> Component Inspector Mode
+            </button>
+          </div>
+        </div>
+
+        <div class="canvas3d-wrapper">
+          <div id="canvas3d-container" class="canvas3d-container"></div>
+
+          <div class="viewport-instructions">
+            <span><i class="fa-solid fa-hand-pointer"></i> Drag to Rotate | Scroll to Zoom | Click Component to Inspect</span>
+          </div>
+
+          <!-- Component Inspector & Learning Mode Overlay -->
+          <div id="inspector-overlay" class="inspector-overlay">
+            <div class="inspector-header">
+              <span id="inspector-title"><i class="fa-solid fa-graduation-cap"></i> Component Inspector</span>
+              <button class="btn-close" onclick="closeInspectorOverlay()">&times;</button>
+            </div>
+            <div class="inspector-body" id="inspector-body">
+              <p style="color: var(--text-muted); font-size: 0.85rem;">Click any 3D component (Cylinders, Pistons, Crankshaft, Rods, Oil Sump, Exhaust) to inspect its operational principles and telemetry parameters.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subsystem Root Cause & Fault Differentiation Card (Span 12) -->
+      <div class="card cause-card">
+        <div class="card-title">
+          <span><i class="fa-solid fa-diagram-project"></i> Subsystem Root Cause & Fault Differentiation</span>
+          <span class="kpi-badge badge-healthy" id="root-cause-badge">NOMINAL OPERATION</span>
+        </div>
+        <div class="cause-grid">
+          <div class="cause-box">
+            <div class="cause-label">Primary Failing Subsystem</div>
+            <div class="cause-val" id="cause-subsystem">All Subsystems Nominal</div>
+          </div>
+          <div class="cause-box">
+            <div class="cause-label">Root Mechanical Cause</div>
+            <div class="cause-val" id="cause-mechanics" style="font-size: 0.85rem; font-weight: normal; color: var(--text-secondary);">All engine parameters operate within standard tolerances.</div>
+          </div>
+          <div class="cause-box">
+            <div class="cause-label">Direct Telemetry Indicators</div>
+            <div class="cause-val" id="cause-telemetry" style="font-size: 0.85rem; font-weight: normal; color: var(--text-secondary);">CHT 170°C | Oil 4.2 bar | Vibration 0.25g</div>
+          </div>
+          <div class="cause-box">
+            <div class="cause-label">Engineering Corrective Action</div>
+            <div class="cause-val" id="cause-action" style="font-size: 0.85rem; font-weight: normal; color: var(--accent-blue);">Continue standard mission profile monitoring.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 1: Engine Health Score -->
+      <div class="card kpi-card">
+        <div class="card-title">
+          <span>Engine Health Score</span>
+          <i class="fa-solid fa-heart-pulse"></i>
+        </div>
+        <div class="kpi-value-container">
+          <div class="kpi-value" id="kpi-health-score">--</div>
+          <div class="kpi-unit">/ 100</div>
+        </div>
+        <div style="margin-top: 10px;">
+          <span class="kpi-badge badge-healthy" id="kpi-health-status">Healthy</span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Predicted Fault -->
+      <div class="card kpi-card">
+        <div class="card-title">
+          <span>Predicted Fault</span>
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="kpi-value-container">
+          <div class="kpi-value" id="kpi-predicted-fault" style="font-size: 1.3rem;">--</div>
+        </div>
+        <div style="margin-top: 10px;">
+          <span style="font-size: 0.8rem; color: var(--text-secondary);" id="kpi-confidence">Confidence: --%</span>
+        </div>
+      </div>
+
+      <!-- KPI 3: Mission Reliability Risk Level -->
+      <div class="card kpi-card">
+        <div class="card-title">
+          <span>Mission Risk Level</span>
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="kpi-value-container">
+          <div class="kpi-value" id="kpi-risk-level" style="font-size: 1.3rem;">--</div>
+        </div>
+        <div style="margin-top: 10px;">
+          <span style="font-size: 0.8rem; color: var(--text-secondary);" id="kpi-risk-score">Risk Index: --/100</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Key Telemetry Summary -->
+      <div class="card kpi-card">
+        <div class="card-title">
+          <span>Engine Speed & Load</span>
+          <i class="fa-solid fa-gauge-high"></i>
+        </div>
+        <div class="kpi-value-container">
+          <div class="kpi-value" id="kpi-rpm">--</div>
+          <div class="kpi-unit">RPM</div>
+        </div>
+        <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary);">
+          <span>Load: <strong id="kpi-load" style="color:#fff;">--%</strong></span>
+          <span>Vib: <strong id="kpi-vibration" style="color:#fff;">-- g</strong></span>
+        </div>
+      </div>
+
+      <!-- Virtual Engine Subsystem Telemetry Panel -->
+      <div class="card twin-panel">
+        <div class="card-title">
+          <span>Subsystem Telemetry Matrix</span>
+          <i class="fa-solid fa-cogs"></i>
+        </div>
+
+        <div class="engine-schematic">
+          <div class="subsystem-box" id="subsystem-cylinders">
+            <i class="fa-solid fa-fire-burner"></i>
+            <div class="subsystem-name">Cylinder Head (CHT)</div>
+            <div class="subsystem-val" id="val-cht">-- °C</div>
+          </div>
+
+          <div class="subsystem-box" id="subsystem-lubrication">
+            <i class="fa-solid fa-oil-can"></i>
+            <div class="subsystem-name">Oil Pressure / Temp</div>
+            <div class="subsystem-val" id="val-oil">-- bar | -- °C</div>
+          </div>
+
+          <div class="subsystem-box" id="subsystem-exhaust">
+            <i class="fa-solid fa-smog"></i>
+            <div class="subsystem-name">Exhaust Gas (EGT)</div>
+            <div class="subsystem-val" id="val-egt">-- °C</div>
+          </div>
+
+          <div class="subsystem-box" id="subsystem-fuel">
+            <i class="fa-solid fa-gas-pump"></i>
+            <div class="subsystem-name">Fuel Flow & Manifold</div>
+            <div class="subsystem-val" id="val-fuel">-- L/h | -- bar</div>
+          </div>
+
+          <div class="subsystem-box" id="subsystem-vibration">
+            <i class="fa-solid fa-wave-square"></i>
+            <div class="subsystem-name">Structural Vibration</div>
+            <div class="subsystem-val" id="val-vib">-- g</div>
+          </div>
+
+          <div class="subsystem-box" id="subsystem-ambient">
+            <i class="fa-solid fa-temperature-low"></i>
+            <div class="subsystem-name">Ambient Temp</div>
+            <div class="subsystem-val" id="val-amb">-- °C</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mission Reliability Assessment Panel -->
+      <div class="card risk-panel">
+        <div class="card-title">
+          <span>Mission Reliability Assessment</span>
+          <i class="fa-solid fa-clipboard-check"></i>
+        </div>
+
+        <div class="risk-level-display badge-healthy" id="risk-display-banner">
+          LOW MISSION RISK
+        </div>
+
+        <div style="font-size: 0.85rem; margin-bottom: 6px;">
+          <strong>Operational Recommendation:</strong>
+          <span id="risk-recommendation" style="color: var(--text-secondary);">--</span>
+        </div>
+
+        <div class="risk-explanation" id="risk-explanation-text">
+          Telemetry operating within normal parameters.
+        </div>
+      </div>
+
+      <!-- Real-Time Chart 1: Temperatures -->
+      <div class="card chart-card">
+        <div class="card-title">
+          <span>Temperature Telemetry (°C)</span>
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <div class="chart-container">
+          <canvas id="tempChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Real-Time Chart 2: RPM & Load -->
+      <div class="card chart-card">
+        <div class="card-title">
+          <span>Engine Speed (RPM) & Load (%)</span>
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <div class="chart-container">
+          <canvas id="rpmChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Real-Time Chart 3: Pressure & Vibration -->
+      <div class="card chart-card">
+        <div class="card-title">
+          <span>Oil Pressure & Vibration</span>
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <div class="chart-container">
+          <canvas id="pressureChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Health Monitoring & Alerts Panel -->
+      <div class="card alerts-card">
+        <div class="card-title">
+          <span>Active Health Alerts & Anomalies</span>
+          <i class="fa-solid fa-bell"></i>
+        </div>
+        <div class="alerts-list" id="alerts-container">
+          <div class="no-alerts"><i class="fa-solid fa-circle-check"></i> All parameters operating within nominal thresholds.</div>
+        </div>
+      </div>
+
+      <!-- Model Performance Panel -->
+      <div class="card metrics-card">
+        <div class="card-title">
+          <span>Machine Learning Model Benchmark</span>
+          <i class="fa-solid fa-square-poll-vertical"></i>
+        </div>
+        <table class="metrics-table">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>Accuracy</th>
+              <th>Precision</th>
+              <th>Recall</th>
+              <th>F1 Score</th>
+            </tr>
+          </thead>
+          <tbody id="metrics-table-body">
+            <tr><td colspan="5">Loading benchmarks...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Audit Log Table -->
+      <div class="card table-card">
+        <div class="card-title">
+          <span>Real-Time Telemetry Audit Log</span>
+          <i class="fa-solid fa-list-ol"></i>
+        </div>
+        <div class="table-wrapper">
+          <table class="telemetry-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>RPM</th>
+                <th>Oil Press</th>
+                <th>Oil Temp</th>
+                <th>CHT</th>
+                <th>EGT</th>
+                <th>Vibration</th>
+                <th>Predicted Fault</th>
+                <th>Health Score</th>
+                <th>Risk Level</th>
+              </tr>
+            </thead>
+            <tbody id="telemetry-table-body">
+              <tr><td colspan="10" style="text-align: center;">Waiting for telemetry stream...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="disclaimer-banner">
+      <p><strong>Academic Disclaimer:</strong> This software-only Digital Twin application is developed for research and educational purposes. Telemetry data is generated by an academic simulation model. The system is not certified for real flight operations.</p>
+    </footer>
+
+  </div>
+
+  <script src="js/engine3d.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>

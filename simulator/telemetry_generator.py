@@ -1,7 +1,20 @@
+import os
+import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from config import (NUM_RECORDS, FAULT_CLASSES, SIMULATION_PROFILES, PARAMETER_BOUNDS)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+SIMULATOR_DIR = Path(__file__).resolve().parent
+if str(SIMULATOR_DIR) not in sys.path:
+    sys.path.insert(0, str(SIMULATOR_DIR))
+
+try:
+    from simulator.config import (NUM_RECORDS, FAULT_CLASSES, SIMULATION_PROFILES, PARAMETER_BOUNDS)
+except ModuleNotFoundError:
+    from config import (NUM_RECORDS, FAULT_CLASSES, SIMULATION_PROFILES, PARAMETER_BOUNDS)
 
 def get_fault_distribution():
     records_per_fault = NUM_RECORDS // len(FAULT_CLASSES)
